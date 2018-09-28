@@ -1,0 +1,132 @@
+Combinator Parsing in Scala, Eugen Labun 2012
+
+
+Chapter 1
+1.1 Basic notions
+Parsers are computer programs that transform flat text streams into some data structures more suitable for further processing
+Combinator parsing system consists of primitive parsers and combinators
+Primitive parsers => recognize some flat subsequence of input
+Combinators => functions that combine parsers into bigger building blocks to enrich, change or create new behavior of the combined parsers as a whole
+    result is again a parser, can be used for further compositions
+    most important combinators are:
+        1) sequencing (several parsers in given order must succeed)
+        2) alternation (one of the parsers must succeed)
+        3) repetitions (repeated applying of a parser to input) 0 or more, 1 or more, 0 or 1
+Closely related to composite pattern.
+
+Chapter 2 // Theoretical Background
+2.1 Parsing Methods
+2.1.1. Recursive Descent
+Each non terminal is represented via a procedure that recognized that non-terminal
+Recognize a nonterminal X =>
+    parser descents into the right-hand side of the rule that describes X;
+    tries to recognize elements that comprise X.
+Recognize a terminal =>
+    a direct comparison with the input is performed
+Grammar itself serves as a guide to the parser's implementation (same principle as for parser combinators)
+
+2.1.2 Scannerless
+Traditionally parsing process is split in two parts:
+1) lexical analysis: building stream of tokens from input text
+2) syntactical analysis: building hierarchal structures from the stream of tokens
+
+Scannerless Parsing => both parts of analysis are specified in one unified grammar and performed by parser
+    Freeing lexical syntax from the restrictions of regex also enables tokens to have hierarchical characterstics
+    Most combinator parsers feature scannerless parsing
+
+2.2 Grammars
+2.2.2 PEG: a recognition-based grammar formalism
+1) Solves ambiguity problem => instead of nondeterministic choice between alternatives, PEG uses prioritized choice
+  a) tries alternatives in their order b) it unconditionally consumes first successful match
+2) Repetitions unconditionally consume longest possible sequence
+3) PEG combines the possibilities of two popular notations for generative grammars – regular expressions
+  and EBNF – in one fomalism equally suitable for lexing, parsing, or scannerless parsing.
+4) PEG defines well-formedness criteria for grammars
+
+2.3.2.3 Using combinators
+def S = (a*) ~ (b*) ~ (c*) //match all as, then all bs, then all cs
+
+Chapter 3 // Usage Patterns
+3.1 Pure parser, or Validating the input
+The simplest usage of parsers is validating the input against a grammar.
+The parser should be able to recognize expressions built of:
+    - integer and floating point numbers
+    - infix operators +, -, *, /
+    - parantheses
+
+PEG grammar:
+expr <- term ("+" term / "-" term)*
+term <- factor ("*" factor / "/" factor)*
+factor <- number / "(" expr ")"
+
+3.1.3 Encoding precedences in grammar rules
+Defining grammar in top-down decomposition fashion allows to easily encode precendences of arithmetical operations directly in grammar rules
+    - start with top rule that represents entire input
+    - expr +/- which bind more loosely compared to * and /
+    - terms consist of * and /
+    - factor is either number or paran expression
+
+3.1.4 PEG to Scala conversion
+
+expr = term ~ rep("+" ~ term | "-" ~ term)
+term = factor ~ rep("*" ~ factor | "/" ~ factor)
+factor = floatingPointNumber | "(" ~ expr ~ ")"
+
+The non-terminals become method definitions (defs).
+Since the expr-parser is recursive (via term and factor) its return type cannot be inferred by the actual Scala compiler,
+and therefore needs explicit specifying: we use Parser[Any].
+
+3.2 Interpreter or Direct evaluation of the input
+Input -> Parser/Evaluator -> Result
+
+
+3.2.1 ^^ Combinator
+A combinator that takes a conversion function as a parameter and apply it to the previous parsing result
+Using that combinator - multiplication of two numbers can be immediately replaced with product of those numbers
+
+3.2.2 ~> and <~ combinators
+To remove unnecessary pieces of input - for example the parantheses
+
+3.2.3 chainl1 combinator
+Parsing a chain of elements separated with some other elements which prescribe the functions to combine the elements of the first type
+Returns the integer value
+chainl1 takes two parsers as arguments:
+1) the first with parsing result of type T
+2) the second one whose parsing result is a function type (T,T) => T (Add, Sub, etc)
+Function will be applied to the consecutive results returned by p, like a left fold
+only applied if p succeeded more than once, otherwise the result of a single p is returned
+p must succeed at least once
+
+3.2.4 ^^^ combinator
+Directly replaces the previous parsing result with a given value ("+" => Add)
+Useful in situations where the previous result is always the same
+
+3.2.6 Definitions of arithmetic functions
+
+trait ArithParser extends JavaTokenParsers {
+def expr: Parser[Double] = chainl1(term, "+" ^^^ {(a: Double , b: Double) => a + b}
+| "-" ^^^ {(a: Double , b: Double) => a - b})
+def term = chainl1(factor , "*" ^^^ {(a: Double , b: Double) => a * b}
+| "/" ^^^ {(a: Double , b: Double) => a / b})
+def factor = floatingPointNumber ^^ {_.toDouble} | "(" ~> expr <~ ")"
+}
+
+3.3 Compiler, or Working with intermediate representations
+decouple evaluation from parsing:
+Input => Parser => Intermediate Representation => Evaluator => Result
+
+3.3.2 AST definition
+Convenient way to define an AST use a hierarchy of case classes with a sealed abstract class at the top
+
+3.3.3 Building the AST
+
+
+I) PARSER COMBINATOR
+Higher order function that accepts seceral parsers as input and returns a new parser as output
+Parser is a function accepting string as input adn returning some structure as output
+Parser combinators enable a recursive descent parsing strategy
+Modular, well-structured, easily maintainable
+
+In any language that has first-class functions, parser combinators can be used to combine basic parsers
+to construct parsers for more complex rules
+
