@@ -41,7 +41,34 @@ class ParserTest extends FlatSpec with Matchers {
     val chainParser = Parser.chainl[String](stringParser, constantParser)
     chainParser.run(List('a', '+', 'a', '+', 'a', 'b')) shouldBe Right(List('b'), "aaa")
   }
-  
+
+  it should "chain in the correct order" in {
+    def add: (String, String) => String = (a:String, b: String) => a ++ b
+
+    val stringParserA: ParserState[String] = Parser.string("a")
+    val stringParserB: ParserState[String] = Parser.string("b")
+    val orElseParser = Parser.orElse(stringParserA, stringParserB)
+    val plus: Char => Boolean = (c: Char) => c.equals('+')
+    val constantParser = Parser.constant(Parser.satisfies(plus), add)
+
+    val chainParser = Parser.chainl[String](orElseParser, constantParser)
+    chainParser.run(List('a', '+', 'b', '+', 'a', '+', 'b', '+', 'a')) shouldBe Right(List(), "ababa")
+  }
+
+  "map" should "transform result type" in {
+    val aParser = Parser.string("a")
+
+    val mapParser = Parser.map[String, String](x => x*2)(aParser)
+    mapParser.run(List('a')) shouldBe Right(List(), "aa")
+  }
+
+  it should "fail if it is unable to map successfully" in {
+    val aParser = Parser.string("b")
+
+    val mapParser = Parser.map[String, String](x => x*2)(aParser)
+    mapParser.run(List('a')) shouldBe Left("")
+  }
+
   "constant" should "return a parser with the correct replacement" in {
     val add = (a: Double, b: Double) => a + b
     val plus: Char => Boolean = (c: Char) => c.equals('+')
@@ -79,38 +106,6 @@ class ParserTest extends FlatSpec with Matchers {
     Parser.zeroOrOne(stringParser).run(List('b')) shouldBe Right(List('b'), None)
   }
 
-  "map" should "transform result type" in {
-    val aParser = Parser.string("a")
-
-    val mapParser = Parser.map[String, String](x => x*2)(aParser)
-    mapParser.run(List('a')) shouldBe Right(List(), "aa")
-  }
-
-  it should "fail if it is unable to map successfully" in {
-    val aParser = Parser.string("b")
-
-    val mapParser = Parser.map[String, String](x => x*2)(aParser)
-    mapParser.run(List('a')) shouldBe Left("")
-  }
-
-  "orElse" should "return new parser if one parser is valid" in {
-    val aParser = Parser.string("a")
-    val bParser = Parser.string("b")
-
-    val orParser1 = Parser.orElse[String](aParser, bParser)
-    orParser1.run(List('a', 'c')) shouldBe Right(List('c'), "a")
-    val orParser2 = Parser.orElse[String](bParser,aParser)
-    orParser2.run(List('a', 'c')) shouldBe Right(List('c'), "a")
-  }
-
-  it should "return failure if neither parser is valid" in {
-    val aParser = Parser.string("a")
-    val bParser = Parser.string("b")
-
-    val orParser1 = Parser.orElse[String](aParser,bParser)
-    orParser1.run(List('c', 'a')) shouldBe Left("")
-  }
-
   "andThen" should "return a new parsers if both are successful" in {
     val aParser = Parser.string("a")
     val bParser = Parser.string("b")
@@ -136,6 +131,24 @@ class ParserTest extends FlatSpec with Matchers {
     andThenParser.run(List('c','c', 'b')) shouldBe Left("")
   }
 
+  "orElse" should "return new parser if one parser is valid" in {
+    val aParser = Parser.string("a")
+    val bParser = Parser.string("b")
+
+    val orParser1 = Parser.orElse[String](aParser, bParser)
+    orParser1.run(List('a', 'c')) shouldBe Right(List('c'), "a")
+    val orParser2 = Parser.orElse[String](bParser,aParser)
+    orParser2.run(List('a', 'c')) shouldBe Right(List('c'), "a")
+  }
+
+  it should "return failure if neither parser is valid" in {
+    val aParser = Parser.string("a")
+    val bParser = Parser.string("b")
+
+    val orParser1 = Parser.orElse[String](aParser,bParser)
+    orParser1.run(List('c', 'a')) shouldBe Left("")
+  }
+
   "satisfies" should "return a parser if the current char matches the value" in {
     val plus = (c: Char) => c.equals('+')
     val charParser = Parser.satisfies(plus)
@@ -158,5 +171,12 @@ class ParserTest extends FlatSpec with Matchers {
     aParser.run(List('a', 'b')) shouldBe Right(List('b'), "a")
     aParser.run(List('a', 'b', 'c')) shouldBe Right(List('b', 'c'), "a")
     aParser.run(List('b', 'a')) shouldBe Left("")
+  }
+
+  "pure" should "always succeed with the designated value and without consuming input" in {
+    val pureParser = Parser.pure('5')
+
+    pureParser.run(List('1')) shouldBe Right(List('1'), '5')
+    pureParser.run(List()) shouldBe Right(List(), '5')
   }
 }

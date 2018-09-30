@@ -12,9 +12,10 @@ object Parser {
     for {
       num1 <- p1
       maybeOp <- zeroOrOne(p2)
+      //maybeNum <- zeroOrOne(p1)
       maybeNum <- zeroOrOne(chainl(p1, p2))
     } yield (maybeOp, maybeNum) match {
-      case (Some(op), Some(num)) => op(num, num1)
+      case (Some(op), Some(num)) => op(num, num1) //chainl(Parser.pure(op(num, num1)), p2)
       case _ => num1
     }
 
@@ -76,7 +77,6 @@ object Parser {
         }
     }
 
-  //TODO: Should this be generic?
   def satisfies(predicate: Char => Boolean): ParserState[Char] =
     StateT[ParseResultOrError, List[Char], Char] {
       case c::chars if predicate(c) => Right(chars, c)
@@ -89,4 +89,6 @@ object Parser {
       case _ => Left("")
     }
 
+  def pure[A](a: A): ParserState[A] =
+    StateT[ParseResultOrError, List[Char], A](chars => Right(chars, a))
 }
