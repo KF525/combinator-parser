@@ -39,4 +39,5 @@ object ArithParser {
   def joinDigits(ints: List[Double]): Double =
     ints.zipWithIndex.map { case (int, index) => val exp = (ints.length - 1) - index
       int * scala.math.pow(10,exp)}.sum
+  //l.indices.reverse
 }

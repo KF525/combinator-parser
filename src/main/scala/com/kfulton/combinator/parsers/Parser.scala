@@ -8,16 +8,21 @@ object Parser {
   type ParseResultOrError[A] = Either[String, A]
   type ParserState[A] = StateT[ParseResultOrError, List[Char], A]
 
+  private def chainRemainder[A](a1: A, p1: ParserState[A], p2: ParserState[(A,A) => A]): ParserState[A] =
+    for {
+      maybeOp <- zeroOrOne(p2)
+      maybeA <- zeroOrOne(p1)
+      result <- (maybeOp, maybeA) match {
+        case (Some(op), Some(a)) => chainRemainder(op(a, a1), p1, p2)
+        case _ => pure(a1)
+      }
+    } yield result
+
   def chainl[A](p1: ParserState[A], p2: ParserState[(A, A) => A]): ParserState[A] =
     for {
-      num1 <- p1
-      maybeOp <- zeroOrOne(p2)
-      //maybeNum <- zeroOrOne(p1)
-      maybeNum <- zeroOrOne(chainl(p1, p2))
-    } yield (maybeOp, maybeNum) match {
-      case (Some(op), Some(num)) => op(num, num1) //chainl(Parser.pure(op(num, num1)), p2)
-      case _ => num1
-    }
+      a <- p1
+      result <- chainRemainder(a, p1, p2)
+    } yield result
 
   def flatMap[A,B](p1: ParserState[A], f: A => ParserState[B]): ParserState[B] =
     p1.flatMap(f)

@@ -51,8 +51,8 @@ class ArithParserTest extends FlatSpec with Matchers {
     executeParser.run(List('2', '0', '+', '4')) shouldBe Right(List(), 24.0)
     executeParser.run(List('2', '0', '-', '4')) shouldBe Right(List(), 16.0)
     executeParser.run(List('2', '0', '+', '4', '+','5')) shouldBe Right(List(), 29.0)
-    //executeParser.run(List('2', '0', '-', '4', '+','5')) shouldBe Right(List(), 21.0)
-    //executeParser.run(List('2', '0', '-', '4', '-','5')) shouldBe Right(List(), 11.0)
-    //executeParser.run(List('2', '0', '+', '4', '-', '1','0')) shouldBe Right(List(), 14.0)
+    executeParser.run(List('2', '0', '-', '4', '+','5')) shouldBe Right(List(), 21.0)
+    executeParser.run(List('2', '0', '-', '4', '-','5')) shouldBe Right(List(), 11.0)
+    executeParser.run(List('2', '0', '+', '4', '-', '1','0')) shouldBe Right(List(), 14.0)
   }
 }
