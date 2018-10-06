@@ -49,7 +49,7 @@ object Parser {
       chars =>
         p1.run(chars) match {
           case Right((chars1, a1)) => Right((chars1, Some(a1)))
-          case Left("") => Right(chars, None)
+          case _ => Right(chars, None)
         }
     }
 
@@ -62,9 +62,9 @@ object Parser {
             val e2: ParseResultOrError[(List[Char], A)] = p2.run(chars1)
             e2 match {
               case (Right((chars2, a2))) => Right((chars2, List(a1, a2)))
-              case Left("") => Left("")
+              case _ => Left("")
             }
-          case Left("") => Left("")
+          case _ => Left("")
         }
     }
 
@@ -80,6 +80,12 @@ object Parser {
             case _ => Left("")
           }
         }
+    }
+
+  def consume(predicate: Char => Boolean): ParserState[Unit] =
+    StateT[ParseResultOrError, List[Char], Unit] {
+      case c::chars if predicate(c) => Right(chars, ())
+      case _ => Left("")
     }
 
   def satisfies(predicate: Char => Boolean): ParserState[Char] =

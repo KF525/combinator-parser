@@ -45,20 +45,62 @@ class ArithParserTest extends FlatSpec with Matchers {
     plusOrMinusParser.run(List('a', '+')) shouldBe Left("")
   }
 
-  "execute" should "add and subtract numerics correctly" in {
-    val executeParser = ArithParser.expression
+  "parenExpression" should "" in {
+    val parenExpressionParser = ArithParser.parenExpression
 
-    executeParser.run(List('2', '0', '+', '4')) shouldBe Right(List(), 24.0)
-    executeParser.run(List('2', '0', '-', '4')) shouldBe Right(List(), 16.0)
-    executeParser.run(List('2', '0', '+', '4', '+','5')) shouldBe Right(List(), 29.0)
-    executeParser.run(List('2', '0', '-', '4', '+','5')) shouldBe Right(List(), 21.0)
-    executeParser.run(List('2', '0', '-', '4', '-','5')) shouldBe Right(List(), 11.0)
-    executeParser.run(List('2', '0', '+', '4', '-', '1','0')) shouldBe Right(List(), 14.0)
-    executeParser.run(List('2', '0', '*', '4', '-', '1','0')) shouldBe Right(List(), 70.0)
-    executeParser.run(List('2','0','/', '4')) shouldBe Right(List(), 5.0)
-    executeParser.run(List('2', '0', '/', '4', '-', '1','0')) shouldBe Right(List(), -5.0)
-    executeParser.run(List('2', '0', '/', '3', '+', '1','0')) shouldBe Right(List(), 16.666666666666668)
-    executeParser.run(List('2', '0', '+', '4', '*', '1','0')) shouldBe Right(List(), 60.0)
-    executeParser.run(List('2', '0', '+', '4', '/', '2')) shouldBe Right(List(), 22.0)
+    parenExpressionParser.run(List('(', '2', '+', '5', ')')) shouldBe Right(List(), 7.0)
+  }
+
+  it should "return a failure if any of the subparsers fails" in {
+    val parenExpressionParser = ArithParser.parenExpression
+
+    parenExpressionParser.run(List('2', '+', '5', ')')) shouldBe Left("")
+    parenExpressionParser.run(List('(', ')')) shouldBe Left("")
+    parenExpressionParser.run(List('(', '2', '+', '5')) shouldBe Left("")
+  }
+
+  "factor" should "return a natural number or numeric result of an expression" in {
+    val factorParser = ArithParser.factor
+
+    factorParser.run(List('2')) shouldBe Right(List(), 2.0)
+    factorParser.run(List('(', '2', ')')) shouldBe Right(List(), 2.0)
+  }
+
+  "term" should "handle subtraction and multiplication" in {
+    val termParser = ArithParser.term
+
+    termParser.run(List('2', '0', '*', '4', '/', '1','0')) shouldBe Right(List(), 8.0)
+    termParser.run(List('2','0','/', '4')) shouldBe Right(List(), 5.0)
+    termParser.run(List('2', '0', '/', '4', '*', '1','0')) shouldBe Right(List(), 50.0)
+    termParser.run(List('(','2', '0', ')', '/', '4', '*', '1','0')) shouldBe Right(List(), 50.0)
+  }
+
+  "expression" should "add and subtract numerics correctly" in {
+    val expressionParser = ArithParser.expression
+
+    expressionParser.run(List('2', '0', '+', '4')) shouldBe Right(List(), 24.0)
+    expressionParser.run(List('2', '0', '-', '4')) shouldBe Right(List(), 16.0)
+    expressionParser.run(List('2', '0', '+', '4', '+','5')) shouldBe Right(List(), 29.0)
+    expressionParser.run(List('2', '0', '-', '4', '+','5')) shouldBe Right(List(), 21.0)
+    expressionParser.run(List('2', '0', '-', '4', '-','5')) shouldBe Right(List(), 11.0)
+    expressionParser.run(List('2', '0', '+', '4', '-', '1','0')) shouldBe Right(List(), 14.0)
+  }
+
+  it should "compute expressions with addition, subtraction, multiplication and division" in {
+    val expressionParser = ArithParser.expression
+
+    expressionParser.run(List('2', '0', '*', '4', '-', '1','0')) shouldBe Right(List(), 70.0)
+    expressionParser.run(List('2','0','/', '4')) shouldBe Right(List(), 5.0)
+    expressionParser.run(List('2', '0', '/', '4', '-', '1','0')) shouldBe Right(List(), -5.0)
+    expressionParser.run(List('2', '0', '/', '3', '+', '1','0')) shouldBe Right(List(), 16.666666666666668)
+    expressionParser.run(List('2', '0', '+', '4', '*', '1','0')) shouldBe Right(List(), 60.0)
+    expressionParser.run(List('2', '0', '+', '4', '/', '2')) shouldBe Right(List(), 22.0)
+  }
+
+  it should "handle expressions with parentheses" in {
+    val expressionParser = ArithParser.expression
+
+    expressionParser.run(List('(', '2', '0', '+', '4', ')', '*', '1','0')) shouldBe Right(List(), 240.0)
+    expressionParser.run(List('(', '2', '0', '+', '4', ')', '/', '2')) shouldBe Right(List(), 12.0)
   }
 }

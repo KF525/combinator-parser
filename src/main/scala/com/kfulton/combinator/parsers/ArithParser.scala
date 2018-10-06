@@ -7,11 +7,21 @@ object ArithParser {
   type ParseResultOrError[A] = Either[String, A]
   type ParserState[A] = StateT[ParseResultOrError, List[Char], A]
 
-  def expression =
-    Parser.chainl[Double](term, ArithParser.plusOrMinus)
+  def expression: ParserState[Double] =
+    Parser.chainl[Double](term, plusOrMinus)
 
-  def term =
-    Parser.chainl[Double](ArithParser.naturalNumberParser, ArithParser.multOrDivide)
+  def term: ParserState[Double] =
+    Parser.chainl[Double](factor, multOrDivide)
+
+  def factor: ParserState[Double] =
+    Parser.orElse(naturalNumberParser, parenExpression)
+
+  def parenExpression: ParserState[Double] =
+    for {
+      _ <- Parser.consume((c:Char) => c.equals('('))
+      expr <- expression
+      _ <- Parser.consume((c:Char) => c.equals(')'))
+    } yield expr
 
   def anyOf(possibleMatches: List[Char]): ParserState[Char] = {
     val possibleChars: List[ParserState[Char]] = for {
@@ -33,10 +43,8 @@ object ArithParser {
   def naturalNumberParser: ParserState[Double] =
     Parser.oneOrMore[Double](ArithParser.digit).map(joinDigits)
 
-
   def digit: ParserState[Double] =
     Parser.map[Char, Double](_.toString.toDouble)(anyOf(List('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')))
-
 
   def joinDigits(ints: List[Double]): Double = {
     val indices = ints.indices.reverse
