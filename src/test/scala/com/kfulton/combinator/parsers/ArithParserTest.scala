@@ -33,10 +33,10 @@ class ArithParserTest extends FlatSpec with Matchers {
     digitParser.run(List('a')) shouldBe Left("")
   }
 
-  "completeDigit" should "return a complete number" in {
-    val entireDigitParser = ArithParser.naturalNumberParser
+  "naturalNumber" should "return a complete number" in {
+    val naturalNumberParser = ArithParser.naturalNumberParser
 
-    entireDigitParser.run(List('1', '2','9','0', 'a')) shouldBe Right(List('a'), 1290)
+    naturalNumberParser.run(List('1', '2','9','0', 'a')) shouldBe Right(List('a'), 1290)
   }
 
   it should "return a failure if input is not plus or minus" in {

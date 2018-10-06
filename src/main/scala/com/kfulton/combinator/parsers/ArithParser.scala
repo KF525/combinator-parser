@@ -41,12 +41,12 @@ object ArithParser {
       else (a: Double, b: Double) => b / a)(anyOf(List('*', '/')))
 
   def naturalNumberParser: ParserState[Double] =
-    Parser.oneOrMore[Double](ArithParser.digit).map(joinDigits)
+    Parser.oneOrMore[Double](ArithParser.digit).map(generateNumber)
 
   def digit: ParserState[Double] =
     Parser.map[Char, Double](_.toString.toDouble)(anyOf(List('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')))
 
-  def joinDigits(ints: List[Double]): Double = {
+  def generateNumber(ints: List[Double]): Double = {
     val indices = ints.indices.reverse
     ints.zip(indices).map {case (int, index) => int * scala.math.pow(10, index)}.sum
   }
