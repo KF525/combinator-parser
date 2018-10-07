@@ -7,6 +7,7 @@ object Parser {
 
   type ParseResultOrError[A] = Either[String, A]
   type ParserState[A] = StateT[ParseResultOrError, List[Char], A]
+  val noTokensMessage = "No tokens."
 
   private def chainRemainder[A](a1: A, p1: ParserState[A], p2: ParserState[(A,A) => A]): ParserState[A] =
     for {
@@ -77,7 +78,7 @@ object Parser {
           case Right((chars1, a1)) => Right((chars1, a1))
           case _ => e2 match {
             case Right((chars2, a2)) => Right((chars2, a2))
-            case _ => Left("")
+            case _ => Left(s"Neither parser succeeded.")
           }
         }
     }
@@ -85,19 +86,22 @@ object Parser {
   def consume(predicate: Char => Boolean): ParserState[Unit] =
     StateT[ParseResultOrError, List[Char], Unit] {
       case c::chars if predicate(c) => Right(chars, ())
-      case _ => Left("")
+      case c::_ if !predicate(c) => Left(s"$c did not satisfy predicate.")
+      case _ => Left(noTokensMessage)
     }
 
   def satisfies(predicate: Char => Boolean): ParserState[Char] =
     StateT[ParseResultOrError, List[Char], Char] {
       case c::chars if predicate(c) => Right(chars, c)
-      case _ => Left("")
+      case c::_ if !predicate(c) => Left(s"$c did not satisfy predicate.")
+      case _ => Left(noTokensMessage)
     }
 
   def string(value: String): ParserState[String] =
     StateT[ParseResultOrError, List[Char], String] {
       case c::chars if c.toString.equals(value) => Right(chars, c.toString)
-      case _ => Left("")
+      case c::_ if !c.toString.equals(value) => Left(s"Expected $value but found $c.")
+      case _ => Left(noTokensMessage)
     }
 
   def pure[A](a: A): ParserState[A] =
