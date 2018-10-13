@@ -33,10 +33,15 @@ class ArithParserTest extends FlatSpec with Matchers with EitherValues {
     digitParser.run(List('a')) shouldBe Left("Neither parser succeeded.")
   }
 
-  "naturalNumber" should "return a complete number" in {
-    val naturalNumberParser = ArithParser.naturalNumberParser
+  "decimal" should "handle decimal numbers as input" in {
+    val decimalParser = ArithParser.decimal
+    decimalParser.run(List('1','2','3','.','4','5')) shouldBe Right(List(), 123.45)
+  }
 
-    naturalNumberParser.run(List('1', '2','9','0', 'a')).right.value shouldBe (List('a'), 1290)
+  it should "return a complete number" in {
+    val decimal = ArithParser.decimal
+
+    decimal.run(List('1', '2','9','0', 'a')).right.value shouldBe (List('a'), 1290)
   }
 
   it should "return a failure if input is not plus or minus" in {

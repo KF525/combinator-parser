@@ -149,21 +149,6 @@ class ParserTest extends FlatSpec with Matchers with EitherValues {
     orParser1.run(List('c', 'a')).left.value shouldBe "Neither parser succeeded."
   }
 
-  "consume" should "consume current character and return remaining tokens" in {
-    val paren = (c: Char) => c.equals('(')
-    val consumeParser = Parser.consume(paren)
-
-    consumeParser.run(List('(', 'a')).right.value shouldBe (List('a'), ())
-  }
-
-  it should "return a fialure if predicate fails or receives an empty list" in {
-    val paren = (c: Char) => c.equals('(')
-    val consumeParser = Parser.consume(paren)
-
-    consumeParser.run(List('a', 'a')).left.value shouldBe "a did not satisfy predicate."
-    consumeParser.run(List()).left.value shouldBe "No tokens."
-  }
-
   "satisfies" should "return a parser if the current char matches the value" in {
     val plus = (c: Char) => c.equals('+')
     val charParser = Parser.satisfies(plus)

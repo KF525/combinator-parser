@@ -1,53 +1,69 @@
 package com.kfulton.combinator.parsers
 
-import cats.data.StateT
 import cats.implicits._
 
 object ArithParser {
-  type ParseResultOrError[A] = Either[String, A]
-  type ParserState[A] = StateT[ParseResultOrError, List[Char], A]
+  import Parser._
 
-  def expression: ParserState[Double] =
+  def expression: Parser[Double] =
     Parser.chainl[Double](term, plusOrMinus)
 
-  def term: ParserState[Double] =
+  def term: Parser[Double] =
     Parser.chainl[Double](factor, multOrDivide)
 
-  def factor: ParserState[Double] =
-    Parser.orElse(naturalNumberParser, parenExpression)
+  def factor: Parser[Double] =
+    Parser.orElse(decimal, parenExpression)
 
-  def parenExpression: ParserState[Double] =
+  def parenExpression: Parser[Double] =
     for {
-      _ <- Parser.consume((c:Char) => c.equals('('))
+      _ <- char('(')
       expr <- expression
-      _ <- Parser.consume((c:Char) => c.equals(')'))
+      _ <- char(')')
     } yield expr
 
-  def anyOf(possibleMatches: List[Char]): ParserState[Char] = {
-    val possibleChars: List[ParserState[Char]] = for {
+  def anyOf(possibleMatches: List[Char]): Parser[Char] = {
+    val possibleChars: List[Parser[Char]] = for {
       ch <- possibleMatches
     } yield Parser.satisfies((c: Char) => c.equals(ch))
     possibleChars.reduce(Parser.orElse[Char])
   }
 
-  def plusOrMinus: ParserState[(Double, Double) => Double] =
+  //TODO: simplify/create or
+  def plusOrMinus: Parser[(Double, Double) => Double] =
     Parser.map[Char, (Double, Double) => Double](
       c => if (c.equals('+')) (a: Double, b: Double) => a + b
       else (a: Double, b: Double) => b - a)(anyOf(List('+', '-')))
 
-  def multOrDivide: ParserState[(Double, Double) => Double] =
+  def multOrDivide: Parser[(Double, Double) => Double] =
     Parser.map[Char, (Double, Double) => Double](
       c => if (c.equals('*')) (a: Double, b: Double) => a * b
       else (a: Double, b: Double) => b / a)(anyOf(List('*', '/')))
 
-  def naturalNumberParser: ParserState[Double] =
-    Parser.oneOrMore[Double](ArithParser.digit).map(generateNumber)
+  def doubles: Parser[List[Double]] =
+    Parser.oneOrMore[Double](ArithParser.digit)
 
-  def digit: ParserState[Double] =
+  def decimal: Parser[Double] =
+    for {
+      left <- doubles
+      _ <- zeroOrOne(char('.'))
+      right <- zeroOrOne(doubles)
+    } yield generateDecimalNumber(left,right)
+
+  def digit: Parser[Double] =
     Parser.map[Char, Double](_.toString.toDouble)(anyOf(List('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')))
 
-  def generateNumber(ints: List[Double]): Double = {
-    val indices = ints.indices.reverse
-    ints.zip(indices).map {case (int, index) => int * scala.math.pow(10, index)}.sum
+  def generateDecimalNumber(left: List[Double], right: Option[List[Double]]) = {
+    val rightD = right match {
+      case Some(d) =>
+        val decIndices = d.indices.map(i => -(i + 1))
+        generateNumber(d, decIndices.toList)
+      case None => .0
+    }
+    val leftIndices = left.indices.reverse
+    generateNumber(left, leftIndices.toList) + rightD
+  }
+
+  def generateNumber(doubles: List[Double], indices: List[Int]): Double = {
+    doubles.zip(indices).map {case (int, index) => int * scala.math.pow(10, index)}.sum
   }
 }

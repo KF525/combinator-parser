@@ -6,10 +6,10 @@ import cats.implicits._
 object Parser {
 
   type ParseResultOrError[A] = Either[String, A]
-  type ParserState[A] = StateT[ParseResultOrError, List[Char], A]
+  type Parser[A] = StateT[ParseResultOrError, List[Char], A]
   val noTokensMessage = "No tokens."
 
-  private def chainRemainder[A](a1: A, p1: ParserState[A], p2: ParserState[(A,A) => A]): ParserState[A] =
+  private def chainRemainder[A](a1: A, p1: Parser[A], p2: Parser[(A,A) => A]): Parser[A] =
     for {
       maybeOp <- zeroOrOne(p2)
       maybeA <- zeroOrOne(p1)
@@ -19,24 +19,24 @@ object Parser {
       }
     } yield result
 
-  def chainl[A](p1: ParserState[A], p2: ParserState[(A, A) => A]): ParserState[A] =
+  def chainl[A](p1: Parser[A], p2: Parser[(A, A) => A]): Parser[A] =
     for {
       a <- p1
       result <- chainRemainder(a, p1, p2)
     } yield result
 
-  def flatMap[A,B](p1: ParserState[A], f: A => ParserState[B]): ParserState[B] =
+  def flatMap[A,B](p1: Parser[A], f: A => Parser[B]): Parser[B] =
     p1.flatMap(f)
 
-  def map[A, B](f: A => B)(p1: ParserState[A]): ParserState[B] =
+  def map[A, B](f: A => B)(p1: Parser[A]): Parser[B] =
     p1.map(f)
 
-  def constant[A, B](p1: ParserState[A], value: B): ParserState[B] =
+  def constant[A, B](p1: Parser[A], value: B): Parser[B] =
     for {
       char <- p1
     } yield value
 
-  def oneOrMore[A](p1: ParserState[A]): ParserState[List[A]] =
+  def oneOrMore[A](p1: Parser[A]): Parser[List[A]] =
     for {
       a <- p1
       maybeA <- zeroOrOne(oneOrMore(p1))
@@ -45,7 +45,7 @@ object Parser {
       case _ => List(a)
     }
 
-  def zeroOrOne[A](p1: ParserState[A]): ParserState[Option[A]] =
+  def zeroOrOne[A](p1: Parser[A]): Parser[Option[A]] =
     StateT[ParseResultOrError, List[Char], Option[A]] {
       chars =>
         p1.run(chars) match {
@@ -54,7 +54,7 @@ object Parser {
         }
     }
 
-  def andThen[A](p1: ParserState[A], p2: ParserState[A]): ParserState[List[A]] =
+  def andThen[A](p1: Parser[A], p2: Parser[A]): Parser[List[A]] =
     StateT[ParseResultOrError, List[Char], List[A]] {
       chars =>
         val e1: ParseResultOrError[(List[Char], A)] = p1.run(chars)
@@ -69,7 +69,7 @@ object Parser {
         }
     }
 
-  def orElse[A](p1: ParserState[A], p2: ParserState[A]): ParserState[A] =
+  def orElse[A](p1: Parser[A], p2: Parser[A]): Parser[A] =
     StateT[ParseResultOrError, List[Char], A] {
       chars =>
         val e1: ParseResultOrError[(List[Char], A)] = p1.run(chars)
@@ -83,27 +83,23 @@ object Parser {
         }
     }
 
-  def consume(predicate: Char => Boolean): ParserState[Unit] =
-    StateT[ParseResultOrError, List[Char], Unit] {
-      case c::chars if predicate(c) => Right(chars, ())
-      case c::_ if !predicate(c) => Left(s"$c did not satisfy predicate.")
-      case _ => Left(noTokensMessage)
-    }
-
-  def satisfies(predicate: Char => Boolean): ParserState[Char] =
+  def satisfies(predicate: Char => Boolean): Parser[Char] =
     StateT[ParseResultOrError, List[Char], Char] {
       case c::chars if predicate(c) => Right(chars, c)
       case c::_ if !predicate(c) => Left(s"$c did not satisfy predicate.")
       case _ => Left(noTokensMessage)
     }
 
-  def string(value: String): ParserState[String] =
+  def string(value: String): Parser[String] =
     StateT[ParseResultOrError, List[Char], String] {
       case c::chars if c.toString.equals(value) => Right(chars, c.toString)
       case c::_ if !c.toString.equals(value) => Left(s"Expected $value but found $c.")
       case _ => Left(noTokensMessage)
     }
 
-  def pure[A](a: A): ParserState[A] =
+  def char(value: Char): Parser[Char] =
+    satisfies(c => c.equals(value))
+
+  def pure[A](a: A): Parser[A] =
     StateT[ParseResultOrError, List[Char], A](chars => Right(chars, a))
 }
