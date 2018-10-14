@@ -6,10 +6,14 @@ object ArithParser {
   import Parser._
 
   def expression: Parser[Double] =
-    Parser.chainl[Double](term, plusOrMinus)
+    Parser.chainl[Double](term, orElse(
+        operation(char('+'), (a: Double, b: Double) => a + b),
+        operation(char('-'), (a: Double, b: Double) => b - a)))
 
   def term: Parser[Double] =
-    Parser.chainl[Double](factor, multOrDivide)
+    Parser.chainl[Double](factor, orElse(
+      operation(char('*'), (a: Double, b: Double) => a * b),
+      operation(char('/'), (a: Double, b: Double) => b / a)))
 
   def factor: Parser[Double] =
     Parser.orElse(decimal, parenExpression)
@@ -28,16 +32,10 @@ object ArithParser {
     possibleChars.reduce(Parser.orElse[Char])
   }
 
-  //TODO: simplify/create or
-  def plusOrMinus: Parser[(Double, Double) => Double] =
-    Parser.map[Char, (Double, Double) => Double](
-      c => if (c.equals('+')) (a: Double, b: Double) => a + b
-      else (a: Double, b: Double) => b - a)(anyOf(List('+', '-')))
-
-  def multOrDivide: Parser[(Double, Double) => Double] =
-    Parser.map[Char, (Double, Double) => Double](
-      c => if (c.equals('*')) (a: Double, b: Double) => a * b
-      else (a: Double, b: Double) => b / a)(anyOf(List('*', '/')))
+  def operation(char: Parser[Char], op: (Double, Double) => Double) =
+    for {
+     c <- char
+    } yield op
 
   def doubles: Parser[List[Double]] =
     Parser.oneOrMore[Double](ArithParser.digit)

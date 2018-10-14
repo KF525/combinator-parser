@@ -44,11 +44,11 @@ class ArithParserTest extends FlatSpec with Matchers with EitherValues {
     decimal.run(List('1', '2','9','0', 'a')).right.value shouldBe (List('a'), 1290)
   }
 
-  it should "return a failure if input is not plus or minus" in {
-    val plusOrMinusParser = ArithParser.plusOrMinus
-
-    plusOrMinusParser.run(List('a', '+')).left.value shouldBe "Neither parser succeeded."
-  }
+//  it should "return a failure if input is not plus or minus" in {
+//    val plusOrMinusParser = ArithParser.plusOrMinus
+//
+//    plusOrMinusParser.run(List('a', '+')).left.value shouldBe "Neither parser succeeded."
+//  }
 
   "parenExpression" should "" in {
     val parenExpressionParser = ArithParser.parenExpression
