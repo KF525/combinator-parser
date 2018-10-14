@@ -2,6 +2,8 @@ package com.kfulton.combinator.parsers
 
 import cats.data.StateT
 import cats.implicits._
+import com.kfulton.combinator.parsers.ArithParser.operation
+import com.kfulton.combinator.parsers.Parser.{char, orElse}
 import org.scalatest.{EitherValues, FlatSpec, Matchers}
 
 class ArithParserTest extends FlatSpec with Matchers with EitherValues {
@@ -44,11 +46,13 @@ class ArithParserTest extends FlatSpec with Matchers with EitherValues {
     decimal.run(List('1', '2','9','0', 'a')).right.value shouldBe (List('a'), 1290)
   }
 
-//  it should "return a failure if input is not plus or minus" in {
-//    val plusOrMinusParser = ArithParser.plusOrMinus
-//
-//    plusOrMinusParser.run(List('a', '+')).left.value shouldBe "Neither parser succeeded."
-//  }
+  it should "return a failure if input is not plus or minus" in {
+    val operationParser = orElse(
+      operation(char('+'), (a: Double, b: Double) => a + b),
+      operation(char('-'), (a: Double, b: Double) => b - a))
+
+    operationParser.run(List('a', '+')).left.value shouldBe "Neither parser succeeded."
+  }
 
   "parenExpression" should "" in {
     val parenExpressionParser = ArithParser.parenExpression
