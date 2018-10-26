@@ -20,11 +20,7 @@ object ArithParser {
   val div = operation(char('/'), (a: Double, b: Double) => b / a)
 
   def factor: Parser[Double] =
-    Parser.orElse(decimalOrNaturalNumber, parenExpression)
-
-
-  def decimalOrNaturalNumber: Parser[Double] =
-    Parser.orElse(decimal, naturalNumber)
+    Parser.orElse(decimal, parenExpression)
 
   def parenExpression: Parser[Double] =
     for {
@@ -44,9 +40,6 @@ object ArithParser {
     for {
      c <- char
     } yield op
-
-  def naturalNumber: Parser[Double] =
-    Parser.oneOrMore[Double](ArithParser.digit).map(generateDecimalNumber(_, None))
 
   def doubles: Parser[List[Double]] =
     Parser.oneOrMore[Double](ArithParser.digit)
