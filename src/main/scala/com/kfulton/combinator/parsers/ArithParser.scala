@@ -6,17 +6,25 @@ object ArithParser {
   import Parser._
 
   def expression: Parser[Double] =
-    Parser.chainl[Double](term, orElse(
-        operation(char('+'), (a: Double, b: Double) => a + b),
-        operation(char('-'), (a: Double, b: Double) => b - a)))
+    Parser.chainl[Double](term, orElse(plus, minus))
 
   def term: Parser[Double] =
-    Parser.chainl[Double](factor, orElse(
-      operation(char('*'), (a: Double, b: Double) => a * b),
-      operation(char('/'), (a: Double, b: Double) => b / a)))
+    Parser.chainl[Double](factor, orElse(mult, div))
+
+  val plus = operation(char('+'), (a: Double, b: Double) => a + b)
+
+  val minus = operation(char('-'), (a: Double, b: Double) => b - a)
+
+  val mult = operation(char('*'), (a: Double, b: Double) => a * b)
+
+  val div = operation(char('/'), (a: Double, b: Double) => b / a)
 
   def factor: Parser[Double] =
-    Parser.orElse(decimal, parenExpression)
+    Parser.orElse(decimalOrNaturalNumber, parenExpression)
+
+
+  def decimalOrNaturalNumber: Parser[Double] =
+    Parser.orElse(decimal, naturalNumber)
 
   def parenExpression: Parser[Double] =
     for {
@@ -37,6 +45,9 @@ object ArithParser {
      c <- char
     } yield op
 
+  def naturalNumber: Parser[Double] =
+    Parser.oneOrMore[Double](ArithParser.digit).map(generateDecimalNumber(_, None))
+
   def doubles: Parser[List[Double]] =
     Parser.oneOrMore[Double](ArithParser.digit)
 
@@ -50,7 +61,7 @@ object ArithParser {
   def digit: Parser[Double] =
     Parser.map[Char, Double](_.toString.toDouble)(anyOf(List('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')))
 
-  def generateDecimalNumber(left: List[Double], right: Option[List[Double]]) = {
+  def generateDecimalNumber(left: List[Double], right: Option[List[Double]]): Double = {
     val rightD = right match {
       case Some(d) =>
         val decIndices = d.indices.map(i => -(i + 1))

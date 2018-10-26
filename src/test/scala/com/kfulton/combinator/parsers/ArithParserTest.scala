@@ -99,6 +99,7 @@ class ArithParserTest extends FlatSpec with Matchers with EitherValues {
   it should "compute expressions with addition, subtraction, multiplication and division" in {
     val expressionParser = ArithParser.expression
 
+    expressionParser.run(List('2', '0', '.', '3', '*', '4', '-', '1','0')).right.value shouldBe (List(), 71.2)
     expressionParser.run(List('2', '0', '*', '4', '-', '1','0')).right.value shouldBe (List(), 70.0)
     expressionParser.run(List('2','0','/', '4')).right.value shouldBe (List(), 5.0)
     expressionParser.run(List('2', '0', '/', '4', '-', '1','0')).right.value shouldBe (List(), -5.0)
